@@ -193,8 +193,9 @@ ${summary(p.body) ? `<span class="excerpt">${esc(summary(p.body, big ? 240 : 140
 }
 function layout({ title, description, body, canonical, image, article = false }) {
   const s = store.settings;
-  const yt = String(s.youtubeLinks || "").split("\n").map(x => x.trim()).filter(Boolean);
-  const channel = s.youtube || "";
+  const yt = String(s.youtubeLinks || "").split("\n").map(x => x.trim()).filter(Boolean).map(u => /^https?:\/\//i.test(u) ? u : "https://" + u);
+  const fullUrl = u => !u ? "" : /^https?:\/\//i.test(u) ? u : "https://" + u.replace(/^\/+/, "");
+  const channel = fullUrl(s.youtube);
   const cats = allCats();
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title><meta name="description" content="${esc(description || s.subtitle)}">
