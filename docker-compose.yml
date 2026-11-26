@@ -1,0 +1,34 @@
+# bhikshuk.com on the Hostinger VPS (Docker Manager project "bhikshuk").
+# The qindiaglobal web server (Caddy) forwards bhikshuk.com to this container by the name "bhikshuk-wp".
+services:
+  site:
+    image: node:22-bookworm
+    restart: unless-stopped
+    environment:
+      PORT: "80"
+      DATA_DIR: /data
+      SITE_URL: https://bhikshuk.com
+      AUTO_UPDATE_MINUTES: "5"
+      REPO: https://github.com/fimbewa/bhikshuk.com.git
+    volumes:
+      - site_data:/data
+      - site_code:/srv
+    command:
+      - bash
+      - -c
+      - |
+        if [ -d /srv/app/.git ]; then
+          git -C /srv/app pull -q --ff-only || echo "Could not download updates; using the copy already here."
+        else
+          git clone -q --depth 1 "$$REPO" /srv/app || { echo "Could not download the code. Is the GitHub repository public?"; sleep 60; exit 1; }
+        fi
+        exec node /srv/app/server.js
+    networks:
+      web:
+        aliases: [bhikshuk-wp]
+networks:
+  web:
+    name: bhikshuk_net
+volumes:
+  site_data:
+  site_code:

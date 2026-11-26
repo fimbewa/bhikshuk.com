@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Owner page – bhikshuk.com</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/site.css">
+<style>
+.adm{padding-top:18px;padding-bottom:60px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;display:grid;gap:12px}
+label{display:grid;gap:4px;font-weight:600;font-size:14px;color:var(--muted)}
+label input,label textarea,label select{font-weight:400;font-size:16px;color:var(--ink)}
+textarea{min-height:46vh;line-height:1.6}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.tabs button{font:inherit;font-weight:700;border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;cursor:pointer;color:var(--ink)}
+.tabs button[aria-pressed=true]{background:var(--deep);color:#fff;border-color:var(--deep)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.list{display:grid;gap:8px}
+.row-item{display:flex;gap:10px;align-items:center;justify-content:space-between;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer;text-align:left;font:inherit;color:var(--ink);width:100%}
+.row-item b{display:block;overflow-wrap:anywhere}.row-item small{color:var(--muted)}
+.pill{flex:none;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;background:#e7f4ec;color:var(--ok)}
+.pill.draft{background:#fdecea;color:var(--bad)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cats{display:flex;flex-wrap:wrap;gap:8px}
+.cats label{display:flex;gap:6px;align-items:center;font-weight:600;color:var(--ink);background:var(--bg);border-radius:999px;padding:5px 12px}
+.cats input{width:auto}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn.danger{background:var(--bad)}
+.btn.small{padding:7px 14px;font-size:14px}
+.msg{font-weight:700;margin:0;min-height:1.4em}.msg.ok{color:var(--ok)}.msg.bad{color:var(--bad)}
+.help{font-size:13px;color:var(--muted);background:var(--bg);border-radius:12px;padding:10px 12px;margin:0}
+.confirm{background:#fdecea;border-radius:12px;padding:12px;display:grid;gap:8px}
+@media (max-width:520px){.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="bar"><div class="wrap bar-in"><a class="brand" href="/">The <b>Immortal</b> Love</a><span id="who" class="small"></span></div></header>
+<main class="wrap adm">
+
+<section id="login" class="panel" hidden>
+  <h1 style="font-size:26px;margin:0">Owner page</h1>
+  <form id="loginForm" style="display:grid;gap:10px">
+    <label>Password<input id="pw" type="password" autocomplete="current-password" required></label>
+    <button class="btn" type="submit">Log in</button>
+    <p id="loginMsg" class="msg bad"></p>
+  </form>
+</section>
+
+<section id="listView" hidden>
+  <div class="top">
+    <div class="tabs" role="group" aria-label="Show">
+      <button id="tPosts" aria-pressed="true">Posts</button>
+      <button id="tPages" aria-pressed="false">Pages</button>
+      <button id="tSettings" aria-pressed="false">Settings</button>
+    </div>
+    <button id="newBtn" class="btn">+ New post</button>
+  </div>
+  <input id="filter" type="search" placeholder="Find a post…" aria-label="Find" style="margin-bottom:10px">
+  <div id="list" class="list"></div>
+</section>
+
+<section id="editView" class="panel" hidden>
+  <div class="top" style="margin:0"><button id="backBtn" class="btn ghost small">← All</button><a id="viewLink" class="btn ghost small" target="_blank" rel="noopener" hidden>View on site</a></div>
+  <label>Title<input id="fTitle" required></label>
+  <label>Text
+    <textarea id="fBody" placeholder="Write here. Leave an empty line between paragraphs."></textarea>
+  </label>
+  <p class="help">Empty line = new paragraph. Start a line with <b>## </b> for a heading, <b>- </b> for a list. A YouTube link alone on its own line shows the video.</p>
+  <div class="actions">
+    <label class="btn ghost small" style="display:inline-block;color:var(--deep)">📷 Add photo<input id="photo" type="file" accept="image/*" hidden></label>
+    <span id="upMsg" class="small"></span>
+  </div>
+  <label>YouTube videos (one link per line, shown at the end)<textarea id="fVideos" style="min-height:70px"></textarea></label>
+  <div id="postOnly">
+    <label style="margin-bottom:6px">Categories</label>
+    <div id="fCats" class="cats"></div>
+    <input id="newCat" placeholder="New category (optional)" style="margin-top:8px">
+  </div>
+  <div class="two">
+    <label>Status<select id="fStatus"><option value="published">Published (everyone sees it)</option><option value="draft">Draft (only you)</option></select></label>
+    <label>Date<input id="fDate" type="date"></label>
+  </div>
+  <div class="two">
+    <label>Web address (bhikshuk.com/…)<input id="fSlug" placeholder="made from the title"></label>
+    <label>Author<input id="fAuthor"></label>
+  </div>
+  <div id="pageOnly" class="two">
+    <label>Menu position (1 = first)<input id="fOrder" type="number"></label>
+    <label>Show in top menu<select id="fMenu"><option value="1">Yes</option><option value="0">No</option></select></label>
+  </div>
+  <div class="actions"><button id="saveBtn" class="btn">Save</button><button id="delBtn" class="btn danger small" hidden>Delete</button></div>
+  <div id="confirmBox" class="confirm" hidden><b>Delete this for good?</b><div class="actions"><button id="delYes" class="btn danger small">Yes, delete</button><button id="delNo" class="btn ghost small">Keep it</button></div></div>
+  <p id="editMsg" class="msg"></p>
+</section>
+
+<section id="settingsView" class="panel" hidden>
+  <label>Site name<input id="sTitle"></label>
+  <label>Tagline<input id="sTagline"></label>
+  <label>Line under the tagline<input id="sSub"></label>
+  <label>Blog heading<input id="sBlog"></label>
+  <label>YouTube channel link<input id="sYt"></label>
+  <label>Footer text<input id="sFoot"></label>
+  <div class="actions"><button id="sSave" class="btn">Save settings</button></div>
+  <p id="sMsg" class="msg"></p>
+  <hr style="border:0;border-top:1px solid var(--line);width:100%">
+  <b>Change password</b>
+  <label>Current password<input id="pOld" type="password" autocomplete="current-password"></label>
+  <label>New password (8+ characters)<input id="pNew" type="password" autocomplete="new-password"></label>
+  <div class="actions"><button id="pSave" class="btn ghost small">Change password</button><button id="logoutBtn" class="btn ghost small">Log out</button></div>
+  <p id="pMsg" class="msg"></p>
+</section>
+
+</main>
+<script src="/admin.js"></script>
+</body>
+</html>
