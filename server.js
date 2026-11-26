@@ -14,6 +14,8 @@ const BACKUPS = path.join(DATA, "backups");
 const PUB = path.join(__dirname, "public");
 const SITE_URL = (process.env.SITE_URL || "https://bhikshuk.com").replace(/\/$/, "");
 const PER_PAGE = 10;
+// The stylesheet address changes whenever its content changes, so browsers never keep an old copy.
+const CSS_V = require("crypto").createHash("md5").update(require("fs").readFileSync(require("path").join(__dirname, "public", "site.css"))).digest("hex").slice(0, 8);
 
 for (const d of [DATA, MEDIA, BACKUPS]) fs.mkdirSync(d, { recursive: true });
 
@@ -173,7 +175,7 @@ function thumb(p, cls = "thumb") {
   const img = firstImage(p);
   if (img) return `<span class="${cls}"><img src="${esc(img)}" alt="" loading="lazy"></span>`;
   const hue = [...String(p.slug)].reduce((a, c) => a + c.charCodeAt(0), 0) % 4;
-  return `<span class="${cls} tile t${hue}" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#lotus"/></svg><b>${esc((p.cats || [])[0] || "The Immortal Love")}</b></span>`;
+  return `<span class="${cls} tile t${hue}" aria-hidden="true"><svg viewBox="0 0 64 64" width="44" height="44"><use href="#lotus"/></svg><b>${esc((p.cats || [])[0] || "The Immortal Love")}</b></span>`;
 }
 function metaLine(p) {
   return `<span class="m-author"><img src="/logo.png" alt="" width="22" height="22">${esc(p.author)}</span><span>${esc(usDate(p.date))}</span><span>${readMins(p)} min read</span>`;
@@ -199,7 +201,7 @@ function layout({ title, description, body, canonical, image, article = false })
 <link rel="icon" href="/logo.png" type="image/png"><link rel="alternate" type="application/rss+xml" title="${esc(s.siteTitle)}" href="/feed.xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Marathi:ital@0;1&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Noto+Serif+Devanagari:wght@400;600&family=Inter:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;600&display=swap">
-<link rel="stylesheet" href="/site.css"></head><body${article ? ' class="reading"' : ""}>
+<link rel="stylesheet" href="/site.css?v=${CSS_V}"></head><body${article ? ' class="reading"' : ""}>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="lotus" viewBox="0 0 64 64"><path fill="currentColor" d="M32 10c5 7 7 14 7 20 0 5-3 9-7 12-4-3-7-7-7-12 0-6 2-13 7-20zm-17 12c7 1 12 5 15 10 2 4 2 9 0 13-5 0-10-2-13-6-3-5-3-11-2-17zm34 0c1 6 1 12-2 17-3 4-8 6-13 6-2-4-2-9 0-13 3-5 8-9 15-10zM8 40c6-1 12 1 17 5 2 2 4 4 5 6-6 2-12 1-17-2-2-2-4-5-5-9zm48 0c-1 4-3 7-5 9-5 3-11 4-17 2 1-2 3-4 5-6 5-4 11-6 17-5z"/></symbol></svg>
 ${article ? '<div class="progress" aria-hidden="true"><i id="prog"></i></div>' : ""}
 <header class="top"><div class="shell top-in">
