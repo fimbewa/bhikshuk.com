@@ -129,66 +129,122 @@ function firstImage(it) {
   return v ? `https://i.ytimg.com/vi/${v}/hqdefault.jpg` : null;
 }
 
-// ---------- page layout ----------
-function layout({ title, description, body, canonical, image }) {
+// ---------- page layout (same design as the old GoDaddy site) ----------
+const DEFAULT_SETTINGS = {
+  featured: "a-great-sculptor-of-the-mahanubhava-sect-part-50-a-acharya-shri-nagarajvyas-kapa\nshri-kshetra-jalicha-dev-chakradhar-swami-buldhana-yatra",
+  youtubeLinks: "http://youtube.com/post/Ugkx002B1mDmbpGykiFHVQFGqVKPuMZd1xoW?si=qLG9L2LMq1mKK-Vv\nhttp://www.youtube.com/@MahanubhavPratitiPanth\nhttps://youtube.com/shorts/kMzwgz9qMZ8?si=MQJ2ShBUmBBW0FGJ",
+  footerLine: "Door of Hell | Swagram | Swadesh | Kaam Mad",
+  footer: "© 2018 All rights reserved.",
+  subtitle: "The eternal journey of Bhikshsuk in the Mahanubhav Dharma till the end of the this Kaliyuga!"
+};
+for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) if (store.settings[k] === undefined || (k === "footer" && store.settings.footer.startsWith("© 2018–2026"))) store.settings[k] = v;
+// The top menu, in the same order as before. "Puja Avasara" opens a small list.
+const MENU = ["privacy-policy", "madhyan-puja-avasar-marathi-aarth-meaning", "sayankal-puja-avasara", "about", "contact",
+  "themessage-of-the-immortal-love", "mahanubhavvichar", "dnyanpunj-bhikshuk-and-dnyanpunj-tapasvini", "lets-know-parmeshwar",
+  "@puja", "leela-charitra-vachan-the-leela-satsang-online", "cafe-social", "my-reported-judgment"];
+const PUJA = ["pratah-puja-avsara-marathi-arth", "madhyan-puja-avasar-marathi-aarth-meaning", "sayankal-puja-avasara"];
+const SHORT = { "dnyanpunj-bhikshuk-and-dnyanpunj-tapasvini": "Dnyanpunj Bhikshuk & Tapasvini", "leela-charitra-vachan-the-leela-satsang-online": "Leela Charitra Vachan", "madhyan-puja-avasar-marathi-aarth-meaning": "Madhyan Puja Avasar Marathi Aarth | Meaning" };
+function navHtml() {
+  const pages = menuPages();
+  const bySlug = Object.fromEntries(published().filter(p => p.type === "page").map(p => [p.slug, p]));
+  const link = p => `<a href="/${esc(p.slug)}">${esc(SHORT[p.slug] || p.title)}</a>`;
+  const out = [], used = new Set();
+  for (const s of MENU) {
+    if (s === "@puja") {
+      const kids = PUJA.map(k => bySlug[k]).filter(Boolean);
+      if (kids.length) out.push(`<details class="sub"><summary>Puja Avasara</summary><div>${kids.map(link).join("")}</div></details>`);
+      kids.forEach(k => used.add(k.slug));
+      continue;
+    }
+    if (bySlug[s]) { out.push(link(bySlug[s])); used.add(s); }
+  }
+  for (const p of pages) if (!used.has(p.slug)) out.push(link(p)); // pages added later on the owner page
+  return out.join("");
+}
+function sidebar() {
+  const recent = posts().slice(0, 5);
+  const months = {};
+  for (const p of posts()) { const k = p.date.slice(0, 7); months[k] = (months[k] || 0) + 1; }
+  const monthName = k => new Date(k + "-15").toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  return `<aside class="side">
+<section class="widget"><h2>Search</h2><form class="sform" action="/search"><input name="q" type="search" aria-label="Search"><button class="btn-navy">Search</button></form></section>
+<section class="widget"><div class="wtabs"><input type="radio" name="wt" id="wt1" checked><label for="wt1">Recent Posts</label><input type="radio" name="wt" id="wt2"><label for="wt2">Archives</label>
+<ul class="wt1">${recent.map(p => `<li><a href="/${esc(p.slug)}">${esc(p.title)}</a></li>`).join("")}</ul>
+<ul class="wt2">${Object.keys(months).map(k => `<li><a href="/archive/${k}">${esc(monthName(k))}</a> (${months[k]})</li>`).join("")}</ul></div></section>
+<section class="widget"><h2>Categories</h2><ul>${allCats().map(c => `<li><a href="/category/${catSlug(c)}">${esc(c)}</a></li>`).join("")}</ul></section>
+<section class="widget"><h2>Meta</h2><ul><li><a href="/admin">Log in</a></li><li><a href="/sitemap.xml">Site map</a></li></ul></section>
+</aside>`;
+}
+function layout({ title, description, body, canonical, image, side = true }) {
   const s = store.settings;
-  const nav = menuPages().map(p => `<a href="/${esc(p.slug)}">${esc(p.title)}</a>`).join("");
+  const featured = String(s.featured || "").split("\n").map(x => store.items.find(i => i.slug === x.trim())).filter(Boolean);
+  const yt = String(s.youtubeLinks || "").split("\n").map(x => x.trim()).filter(Boolean);
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title><meta name="description" content="${esc(description || s.subtitle)}">
 <link rel="canonical" href="${esc(SITE_URL + (canonical || "/"))}">
 <meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(description || s.subtitle)}">
 <meta property="og:type" content="website"><meta property="og:url" content="${esc(SITE_URL + (canonical || "/"))}">
-${image ? `<meta property="og:image" content="${esc(image.startsWith("/") ? SITE_URL + image : image)}">` : ""}
-<meta name="theme-color" content="#1d3557"><link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/site.css"></head><body>
-<header class="bar"><div class="wrap bar-in"><a class="brand" href="/">The <b>Immortal</b> Love</a>
-<form class="search" action="/search" role="search"><input name="q" type="search" placeholder="Search" aria-label="Search"></form></div>
-<nav class="wrap nav" aria-label="Menu"><a href="/">Home</a>${nav}</nav></header>
-<main>${body}</main>
+<meta property="og:image" content="${esc(image ? (image.startsWith("/") ? SITE_URL + image : image) : SITE_URL + "/logo.png")}">
+<meta name="theme-color" content="#1a3a6b"><link rel="icon" href="/logo.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+Dives+Akuru&family=Playfair+Display:wght@400;500;700&family=Noto+Serif+Devanagari:wght@400;600&display=swap">
+<link rel="stylesheet" href="/site.css"></head><body id="top">
+<header class="masthead"><div class="wrap">
+<a class="site-title" href="/">${esc(s.siteTitle)}</a>
+<p class="tagline">${esc(s.tagline)}</p><p class="subline">${esc(s.subtitle)}</p>
+<form class="hsearch" action="/search" role="search"><input name="q" type="search" placeholder="Search …" aria-label="Search"><button class="btn-gold">Search</button></form>
+</div></header>
+<nav class="menu" aria-label="Menu"><details class="menu-toggle"><summary>Menu <span aria-hidden="true">☰</span></summary></details><div class="wrap menu-links">${navHtml()}</div></nav>
+<div class="wrap ${side ? "cols" : "single"}"><main class="content">${body}</main>${side ? sidebar() : ""}</div>
 <footer class="foot"><div class="wrap">
-<p><b>${esc(s.siteTitle)}</b> · ${esc(s.tagline)}</p>
-${s.youtube ? `<p><a href="${esc(s.youtube)}" target="_blank" rel="noopener">Watch on YouTube</a></p>` : ""}
-<p class="small"><a href="/privacy-policy">Privacy Policy</a> · <a href="/contact">Contact</a></p>
-<p class="small">${esc(s.footer)}</p></div></footer></body></html>`;
+${featured.length ? `<p class="feat">${featured.map(p => `<a href="/${esc(p.slug)}">${esc(p.title)}</a>`).join('<span class="sep">|</span>')}</p><hr>` : ""}
+${yt.length ? `<p class="ytl">YouTube Links:</p><p class="ytlinks">${yt.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u)}</a>`).join("<br>")}</p><hr>` : ""}
+${s.footerLine ? `<p>${esc(s.footerLine)}</p>` : ""}
+<div class="foot-end"><p>${esc(s.footer)}</p><a class="totop" href="#top">↑ Scroll back to top</a></div>
+</div></footer></body></html>`;
+}
+function tags(p) {
+  return (p.cats || []).length ? `<p class="tags">${p.cats.map(c => `<a href="/category/${catSlug(c)}">${esc(c)}</a>`).join("")}</p>` : "";
 }
 function card(p) {
-  const img = firstImage(p);
-  return `<a class="pcard-link" href="/${esc(p.slug)}">${img ? `<img src="${esc(img)}" alt="" loading="lazy">` : ""}<div>
-<p class="kicker">${esc((p.cats || [])[0] || "Post")}</p><h2>${esc(p.title)}</h2>
-<p>${esc(summary(p.body))}</p><p class="meta">${esc(longDate(p.date))} · ${esc(p.author)}</p><span>Read →</span></div></a>`;
+  return `<article class="entry"><h2><a href="/${esc(p.slug)}">${esc(p.title)}</a></h2>
+<p class="meta">${esc(usDate(p.date))} <span>by</span> <a href="/author/${catSlug(p.author)}">${esc(p.author)}</a></p>${tags(p)}</article>`;
 }
+const usDate = iso => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "Asia/Kolkata" }); };
 function listPage(req, res, { title, heading, items, base, canonical }) {
   const url = new URL(req.url, "http://x");
-  const page = Math.max(1, parseInt(url.searchParams.get("page") || req.pageNo || "1", 10) || 1);
   const pages = Math.max(1, Math.ceil(items.length / PER_PAGE));
+  const page = Math.min(pages, Math.max(1, parseInt(url.searchParams.get("page") || "1", 10) || 1));
   const slice = items.slice((page - 1) * PER_PAGE, page * PER_PAGE);
-  const s = store.settings;
   const sep = base.includes("?") ? "&" : "?";
-  const pager = pages > 1 ? `<nav class="pager">${page > 1 ? `<a class="btn ghost" href="${base}${sep}page=${page - 1}">← Newer</a>` : "<span></span>"}<span>Page ${page} of ${pages}</span>${page < pages ? `<a class="btn ghost" href="${base}${sep}page=${page + 1}">Older →</a>` : "<span></span>"}</nav>` : "";
-  const hero = base === "/" && page === 1 ? `<section class="hero"><div class="wrap"><div class="lamp" aria-hidden="true"><i></i><i></i><i></i></div>
-<h1>${esc(s.siteTitle)}</h1><p class="lead">${esc(s.tagline)}</p><p class="hero-sub">${esc(s.subtitle)}</p></div></section>` : "";
-  const cats = allCats().map(c => `<a href="/category/${catSlug(c)}">${esc(c)}</a>`).join("");
+  const href = n => n === 1 ? base : `${base}${sep}page=${n}`;
+  let nums = [];
+  for (let n = 1; n <= pages; n++) if (n === 1 || n === pages || Math.abs(n - page) <= 1) nums.push(n); else if (nums[nums.length - 1] !== "…") nums.push("…");
+  const pager = pages > 1 ? `<nav class="pager">${page < pages ? `<a href="${href(page + 1)}">← Older posts</a><span class="bar">|</span>` : ""}${nums.map(n => n === "…" ? "<span>…</span>" : n === page ? `<b>${n}</b>` : `<a href="${href(n)}">${n}</a>`).join("")}${page > 1 ? `<span class="bar">|</span><a href="${href(page - 1)}">Newer posts →</a>` : ""}</nav>` : "";
+  const isHome = base === "/";
   send(res, 200, layout({
-    title, canonical, description: s.subtitle,
-    body: `${hero}<div class="wrap block"><h1 class="list-h">${esc(heading)}</h1>
-<div class="chips">${cats}</div>
-<div class="cards">${slice.map(card).join("") || "<p>No posts yet.</p>"}</div>${pager}</div>`
+    title, canonical, description: store.settings.subtitle,
+    body: `${isHome && page === 1 ? `<img class="logo" src="/logo.png" alt="The Kali Yuga's The Revolution of the Immortal Love, propounded by The Messenger of the Immortal Love" width="200" height="199">` : ""}
+<h1 class="${isHome ? "sr" : "list-h"}">${esc(heading)}</h1>
+${slice.map(card).join("") || "<p>Nothing found.</p>"}${pager}`
   }));
 }
 function itemPage(res, it, preview = false) {
   const vids = (it.videos || []).map(ytId).filter(Boolean).map(video).join("");
-  const meta = it.type === "post" ? `<p class="meta">${esc(longDate(it.date))} · ${esc(it.author)}${(it.cats || []).length ? " · " + it.cats.map(c => `<a href="/category/${catSlug(c)}">${esc(c)}</a>`).join(", ") : ""}</p>` : "";
   send(res, 200, layout({
-    title: `${it.title} – ${store.settings.siteTitle}`, canonical: "/" + it.slug, description: summary(it.body, 160), image: firstImage(it),
-    body: `<article class="wrap post">${preview ? '<p class="tnote">Preview: this is a draft. Only you can see it.</p>' : ""}
-${it.type === "post" ? `<p class="kicker">${esc((it.cats || [])[0] || "Post")}</p>` : ""}<h1>${esc(it.title)}</h1>${meta}
+    title: `${it.title} – Bhikshuk`, canonical: "/" + it.slug, description: summary(it.body, 160), image: firstImage(it),
+    body: `<article class="post">${preview ? '<p class="tnote">Preview: this is a draft. Only you can see it.</p>' : ""}
+<p><a class="back" href="/">← Back to Home</a></p>
+${it.type === "post" && (it.cats || []).length ? `<p class="kick">${it.cats.map(c => `<a href="/category/${catSlug(c)}">${esc(c)}</a>`).join("")}</p>` : ""}
+<h1>${esc(it.title)}</h1>
+${it.type === "post" ? `<p class="byline">By ${esc(it.author)}<span>${esc(longDate(it.date))}</span></p>` : ""}
 <div class="post-body">${renderBody(it.body)}${vids}</div>
-${it.type === "post" ? `<p class="share"><a class="sbtn wa" href="https://wa.me/?text=${encodeURIComponent(it.title + " " + SITE_URL + "/" + it.slug)}" target="_blank" rel="noopener">Share on WhatsApp</a></p>` : ""}
-<p><a href="/">← Back to Home</a></p></article>`
+${it.type === "post" ? `<p class="share"><a href="https://wa.me/?text=${encodeURIComponent(it.title + " " + SITE_URL + "/" + it.slug)}" target="_blank" rel="noopener">Share on WhatsApp</a></p>` : ""}
+<p><a class="back" href="/">← Back to Home</a></p></article>`
   }));
 }
 function notFound(res) {
-  send(res, 404, layout({ title: "Page not found", body: `<div class="wrap block"><h1>Page not found</h1><p>Sorry, this page doesn't exist or has been moved.</p><p><a class="btn" href="/">Go Home</a></p></div>` }));
+  send(res, 404, layout({ title: "Page not found", body: `<h1 class="list-h">Page not found</h1><p>Sorry, the page you're looking for doesn't exist or has been moved.</p><p><a class="back" href="/">Go Home</a></p>` }));
 }
 
 // ---------- http ----------
@@ -225,7 +281,7 @@ function cleanItem(b, old = {}) {
   it.order = Number(b.order ?? it.order ?? 0) || 0;
   it.inMenu = it.type === "page" ? !!(b.inMenu ?? it.inMenu ?? true) : false;
   let slug = slugify(b.slug || it.slug || it.title);
-  const RESERVED = ["admin", "api", "media", "search", "category", "page", "sitemap.xml", "robots.txt", "site.css", "favicon.svg"];
+  const RESERVED = ["admin", "api", "media", "search", "category", "archive", "author", "logo.png", "page", "sitemap.xml", "robots.txt", "site.css", "favicon.svg"];
   let s = slug, i = 2;
   while (RESERVED.includes(s) || store.items.some(x => x.slug === s && x.id !== it.id)) s = `${slug}-${i++}`;
   it.slug = s;
@@ -267,7 +323,7 @@ async function api(req, res, p) {
   }
   if (p === "/api/settings" && req.method === "PUT") {
     const b = JSON.parse((await readBody(req, 50e3)).toString());
-    for (const k of ["siteTitle", "tagline", "subtitle", "blogTitle", "youtube", "footer"]) if (typeof b[k] === "string") store.settings[k] = b[k].trim().slice(0, 500);
+    for (const k of ["siteTitle", "tagline", "subtitle", "blogTitle", "youtube", "footer", "footerLine", "youtubeLinks", "featured"]) if (typeof b[k] === "string") store.settings[k] = b[k].trim().slice(0, 2000);
     save(); return json(res, 200, { ok: true, settings: store.settings });
   }
   if (p === "/api/password" && req.method === "POST") {
@@ -298,7 +354,7 @@ const server = http.createServer(async (req, res) => {
     if (p === "/") return listPage(req, res, { title: `${store.settings.siteTitle} | ${store.settings.tagline}`, heading: store.settings.blogTitle, items: posts(), base: "/", canonical: "/" });
     let m = p.match(/^\/page\/(\d+)$/);
     if (m) { res.writeHead(301, { Location: "/?page=" + m[1] }); return res.end(); }
-    if (p === "/site.css" || p === "/favicon.svg") return sendFile(res, path.join(PUB, p), "public, max-age=3600");
+    if (p === "/site.css" || p === "/favicon.svg" || p === "/logo.png") return sendFile(res, path.join(PUB, p), "public, max-age=3600");
     if (p === "/admin") return sendFile(res, path.join(PUB, "admin.html"), "no-store");
     if (p === "/admin.js") return sendFile(res, path.join(PUB, "admin.js"), "no-store");
     m = p.match(/^\/media\/([\w.-]+)$/);
@@ -308,6 +364,17 @@ const server = http.createServer(async (req, res) => {
       const cat = allCats().find(c => catSlug(c) === m[1]);
       if (!cat) return notFound(res);
       return listPage(req, res, { title: `${cat} – ${store.settings.siteTitle}`, heading: cat, items: posts().filter(x => x.cats.includes(cat)), base: "/category/" + m[1], canonical: "/category/" + m[1] });
+    }
+    m = p.match(/^\/archive\/(\d{4}-\d{2})$/);
+    if (m) {
+      const label = new Date(m[1] + "-15").toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+      return listPage(req, res, { title: `${label} – ${store.settings.siteTitle}`, heading: "Archives: " + label, items: posts().filter(x => x.date.startsWith(m[1])), base: "/archive/" + m[1], canonical: "/archive/" + m[1] });
+    }
+    m = p.match(/^\/author\/([\w-]+)$/);
+    if (m) {
+      const list = posts().filter(x => catSlug(x.author) === m[1]);
+      if (!list.length) return notFound(res);
+      return listPage(req, res, { title: `${list[0].author} – ${store.settings.siteTitle}`, heading: "Author: " + list[0].author, items: list, base: "/author/" + m[1], canonical: "/author/" + m[1] });
     }
     if (p === "/search") {
       const q = (url.searchParams.get("q") || "").trim().toLowerCase();
