@@ -204,13 +204,13 @@ function layout({ title, description, body, canonical, image, article = false })
 ${article ? '<div class="progress" aria-hidden="true"><i id="prog"></i></div>' : ""}
 <header class="top"><div class="shell top-in">
 <a class="brand" href="/"><img src="/logo.png" alt="" width="40" height="40"><span><b>${esc(s.siteTitle)}</b><small>bhikshuk.com</small></span></a>
-<nav class="primary" aria-label="Main"><a href="/">Home</a><a href="/themessage-of-the-immortal-love">The Message</a><a href="/about">About</a><a href="/contact">Contact</a></nav>
-<div class="top-act"><form class="qs" action="/search" role="search"><input name="q" type="search" placeholder="Search posts" aria-label="Search posts"></form>
+<div class="top-act" style="margin-left:auto"><form class="qs" action="/search" role="search"><input name="q" type="search" placeholder="Search posts" aria-label="Search posts"></form>
 <details class="drawer"><summary aria-label="All pages"><span class="burger"><i></i><i></i><i></i></span><span class="dl">Menu</span></summary>
 <div class="drawer-panel"><form action="/search" class="dsearch"><input name="q" type="search" placeholder="Search posts" aria-label="Search posts"></form>
 <p class="dh">Pages</p><div class="dlinks">${navHtml()}</div>
 ${cats.length ? `<p class="dh">Topics</p><div class="dlinks">${cats.map(c => `<a href="/category/${catSlug(c)}">${esc(c)}</a>`).join("")}</div>` : ""}
 </div></details></div></div></header>
+<nav class="pagebar" aria-label="Pages"><div class="shell pagebar-in">${navHtml()}</div></nav>
 <main id="main">${body}</main>
 <footer class="foot"><div class="shell foot-grid">
 <div class="foot-brand"><img src="/logo.png" alt="" width="64" height="64"><p class="fb-title">${esc(s.siteTitle)}</p><p>${esc(s.tagline)}</p>${channel ? `<a class="yt-btn" href="${esc(channel)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.7 15.1V8.9l5.8 3.1-5.8 3.1z"/></svg>Watch on YouTube</a>` : ""}</div>
