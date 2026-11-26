@@ -129,7 +129,7 @@ function firstImage(it) {
   return v ? `https://i.ytimg.com/vi/${v}/hqdefault.jpg` : null;
 }
 
-// ---------- page layout (same design as the old GoDaddy site) ----------
+// ---------- page layout ----------
 const DEFAULT_SETTINGS = {
   featured: "a-great-sculptor-of-the-mahanubhava-sect-part-50-a-acharya-shri-nagarajvyas-kapa\nshri-kshetra-jalicha-dev-chakradhar-swami-buldhana-yatra",
   youtubeLinks: "http://youtube.com/post/Ugkx002B1mDmbpGykiFHVQFGqVKPuMZd1xoW?si=qLG9L2LMq1mKK-Vv\nhttp://www.youtube.com/@MahanubhavPratitiPanth\nhttps://youtube.com/shorts/kMzwgz9qMZ8?si=MQJ2ShBUmBBW0FGJ",
@@ -166,90 +166,124 @@ function navHtml() {
   for (const p of pages) if (!used.has(p.slug)) out.push(link(p)); // pages added later on the owner page
   return out.join("");
 }
-function sidebar() {
-  const recent = posts().slice(0, 5);
-  const months = {};
-  for (const p of posts()) { const k = p.date.slice(0, 7); months[k] = (months[k] || 0) + 1; }
-  const monthName = k => new Date(k + "-15").toLocaleDateString("en-IN", { month: "long", year: "numeric" });
-  return `<aside class="side">
-<section class="widget"><h2>Search</h2><form class="sform" action="/search"><input name="q" type="search" aria-label="Search"><button class="btn-navy">Search</button></form></section>
-<section class="widget"><div class="wtabs"><input type="radio" name="wt" id="wt1" checked><label for="wt1">Recent Posts</label><input type="radio" name="wt" id="wt2"><label for="wt2">Archives</label>
-<ul class="wt1">${recent.map(p => `<li><a href="/${esc(p.slug)}">${esc(p.title)}</a></li>`).join("")}</ul>
-<ul class="wt2">${Object.keys(months).map(k => `<li><a href="/archive/${k}">${esc(monthName(k))}</a> (${months[k]})</li>`).join("")}</ul></div></section>
-<section class="widget"><h2>Categories</h2><ul>${allCats().map(c => `<li><a href="/category/${catSlug(c)}">${esc(c)}</a></li>`).join("")}</ul></section>
-<section class="widget"><h2>Meta</h2><ul><li><a href="/admin">Log in</a></li><li><a href="/sitemap.xml">Site map</a></li></ul></section>
-</aside>`;
+const usDate = iso => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }); };
+const readMins = it => Math.max(1, Math.round(String(it.body || "").split(/\s+/).filter(Boolean).length / 200));
+// A picture for each card: the post's own photo, else its YouTube picture, else a drawn tile.
+function thumb(p, cls = "thumb") {
+  const img = firstImage(p);
+  if (img) return `<span class="${cls}"><img src="${esc(img)}" alt="" loading="lazy"></span>`;
+  const hue = [...String(p.slug)].reduce((a, c) => a + c.charCodeAt(0), 0) % 4;
+  return `<span class="${cls} tile t${hue}" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#lotus"/></svg><b>${esc((p.cats || [])[0] || "The Immortal Love")}</b></span>`;
 }
-function layout({ title, description, body, canonical, image, side = true }) {
+function metaLine(p) {
+  return `<span class="m-author"><img src="/logo.png" alt="" width="22" height="22">${esc(p.author)}</span><span>${esc(usDate(p.date))}</span><span>${readMins(p)} min read</span>`;
+}
+function card(p, big = false) {
+  return `<article class="card${big ? " card-big" : ""}"><a class="card-link" href="/${esc(p.slug)}">${thumb(p)}<span class="card-text">
+<span class="kicker">${esc((p.cats || [])[0] || "Post")}</span><span class="card-title">${esc(p.title)}</span>
+${summary(p.body) ? `<span class="excerpt">${esc(summary(p.body, big ? 240 : 140))}</span>` : ""}
+<span class="meta">${metaLine(p)}</span></span></a></article>`;
+}
+function layout({ title, description, body, canonical, image, article = false }) {
   const s = store.settings;
-  const featured = String(s.featured || "").split("\n").map(x => store.items.find(i => i.slug === x.trim())).filter(Boolean);
   const yt = String(s.youtubeLinks || "").split("\n").map(x => x.trim()).filter(Boolean);
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  const channel = s.youtube || yt.find(u => u.includes("@")) || "";
+  const cats = allCats();
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title><meta name="description" content="${esc(description || s.subtitle)}">
 <link rel="canonical" href="${esc(SITE_URL + (canonical || "/"))}">
-<meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(description || s.subtitle)}">
-<meta property="og:type" content="website"><meta property="og:url" content="${esc(SITE_URL + (canonical || "/"))}">
-<meta property="og:image" content="${esc(image ? (image.startsWith("/") ? SITE_URL + image : image) : SITE_URL + "/logo.png")}">
-<meta name="theme-color" content="#1a3a6b"><link rel="icon" href="/logo.png" type="image/png">
+<meta property="og:site_name" content="${esc(s.siteTitle)}"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(description || s.subtitle)}">
+<meta property="og:type" content="${article ? "article" : "website"}"><meta property="og:url" content="${esc(SITE_URL + (canonical || "/"))}">
+<meta property="og:image" content="${esc(image ? (image.startsWith("/") ? SITE_URL + image : image) : SITE_URL + "/logo.png")}"><meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#fbf7f0" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#14121c" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/logo.png" type="image/png"><link rel="alternate" type="application/rss+xml" title="${esc(s.siteTitle)}" href="/feed.xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+Dives+Akuru&family=Playfair+Display:wght@400;500;700&family=Noto+Serif+Devanagari:wght@400;600&display=swap">
-<link rel="stylesheet" href="/site.css"></head><body id="top">
-<header class="masthead"><div class="wrap">
-<a class="site-title" href="/">${esc(s.siteTitle)}</a>
-<p class="tagline">${esc(s.tagline)}</p><p class="subline">${esc(s.subtitle)}</p>
-<form class="hsearch" action="/search" role="search"><input name="q" type="search" placeholder="Search …" aria-label="Search"><button class="btn-gold">Search</button></form>
-</div></header>
-<nav class="menu" aria-label="Menu"><details class="menu-toggle"><summary>Menu <span aria-hidden="true">☰</span></summary></details><div class="wrap menu-links">${navHtml()}</div></nav>
-<div class="wrap ${side ? "cols" : "single"}"><main class="content">${body}</main>${side ? sidebar() : ""}</div>
-<footer class="foot"><div class="wrap">
-${featured.length ? `<p class="feat">${featured.map(p => `<a href="/${esc(p.slug)}">${esc(p.title)}</a>`).join('<span class="sep">|</span>')}</p><hr>` : ""}
-${yt.length ? `<p class="ytl">YouTube Links:</p><p class="ytlinks">${yt.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u)}</a>`).join("<br>")}</p><hr>` : ""}
-${s.footerLine ? `<p>${esc(s.footerLine)}</p>` : ""}
-<div class="foot-end"><p>${esc(s.footer)}</p><a class="totop" href="#top">↑ Scroll back to top</a></div>
-</div></footer></body></html>`;
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Marathi:ital@0;1&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Noto+Serif+Devanagari:wght@400;600&family=Inter:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;600&display=swap">
+<link rel="stylesheet" href="/site.css"></head><body${article ? ' class="reading"' : ""}>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="lotus" viewBox="0 0 64 64"><path fill="currentColor" d="M32 10c5 7 7 14 7 20 0 5-3 9-7 12-4-3-7-7-7-12 0-6 2-13 7-20zm-17 12c7 1 12 5 15 10 2 4 2 9 0 13-5 0-10-2-13-6-3-5-3-11-2-17zm34 0c1 6 1 12-2 17-3 4-8 6-13 6-2-4-2-9 0-13 3-5 8-9 15-10zM8 40c6-1 12 1 17 5 2 2 4 4 5 6-6 2-12 1-17-2-2-2-4-5-5-9zm48 0c-1 4-3 7-5 9-5 3-11 4-17 2 1-2 3-4 5-6 5-4 11-6 17-5z"/></symbol></svg>
+${article ? '<div class="progress" aria-hidden="true"><i id="prog"></i></div>' : ""}
+<header class="top"><div class="shell top-in">
+<a class="brand" href="/"><img src="/logo.png" alt="" width="40" height="40"><span><b>${esc(s.siteTitle)}</b><small>bhikshuk.com</small></span></a>
+<nav class="primary" aria-label="Main"><a href="/">Home</a><a href="/themessage-of-the-immortal-love">The Message</a><a href="/about">About</a><a href="/contact">Contact</a></nav>
+<div class="top-act"><form class="qs" action="/search" role="search"><input name="q" type="search" placeholder="Search posts" aria-label="Search posts"></form>
+<details class="drawer"><summary aria-label="All pages"><span class="burger"><i></i><i></i><i></i></span><span class="dl">Menu</span></summary>
+<div class="drawer-panel"><form action="/search" class="dsearch"><input name="q" type="search" placeholder="Search posts" aria-label="Search posts"></form>
+<p class="dh">Pages</p><div class="dlinks">${navHtml()}</div>
+${cats.length ? `<p class="dh">Topics</p><div class="dlinks">${cats.map(c => `<a href="/category/${catSlug(c)}">${esc(c)}</a>`).join("")}</div>` : ""}
+</div></details></div></div></header>
+<main id="main">${body}</main>
+<footer class="foot"><div class="shell foot-grid">
+<div class="foot-brand"><img src="/logo.png" alt="" width="64" height="64"><p class="fb-title">${esc(s.siteTitle)}</p><p>${esc(s.tagline)}</p>${channel ? `<a class="yt-btn" href="${esc(channel)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.7 15.1V8.9l5.8 3.1-5.8 3.1z"/></svg>Watch on YouTube</a>` : ""}</div>
+<div><p class="fh">Pages</p><div class="flinks">${menuPages().map(p => `<a href="/${esc(p.slug)}">${esc(SHORT[p.slug] || p.title)}</a>`).join("")}<a href="/privacy-policy">Privacy Policy</a></div></div>
+<div><p class="fh">Topics</p><div class="flinks">${cats.map(c => `<a href="/category/${catSlug(c)}">${esc(c)}</a>`).join("")}<a href="/archive">All posts by month</a></div>
+${yt.length ? `<p class="fh" style="margin-top:22px">YouTube</p><div class="flinks">${yt.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">${u.includes("@") ? esc("@" + u.split("@")[1]) : u.includes("shorts") ? "YouTube Shorts" : "Community post " + (i + 1)}</a>`).join("")}</div>` : ""}</div>
+</div><div class="shell foot-end">${s.footerLine ? `<p>${esc(s.footerLine)}</p>` : ""}<p>${esc(s.footer)} · <a href="/admin">Owner login</a></p></div></footer>
+${article ? `<script>(()=>{const b=document.getElementById("prog"),a=document.querySelector(".prose");if(!b||!a)return;const f=()=>{const r=a.getBoundingClientRect(),h=r.height-innerHeight;b.style.transform="scaleX("+Math.min(1,Math.max(0,-r.top/(h>0?h:1)))+")"};addEventListener("scroll",f,{passive:true});f();const c=document.getElementById("copy");c&&c.addEventListener("click",()=>{navigator.clipboard&&navigator.clipboard.writeText(location.href).then(()=>{c.textContent="Link copied"},()=>{})})})();</script>` : ""}
+</body></html>`;
 }
-function tags(p) {
-  return (p.cats || []).length ? `<p class="tags">${p.cats.map(c => `<a href="/category/${catSlug(c)}">${esc(c)}</a>`).join("")}</p>` : "";
-}
-function card(p) {
-  return `<article class="entry"><h2><a href="/${esc(p.slug)}">${esc(p.title)}</a></h2>
-<p class="meta">${esc(usDate(p.date))} <span>by</span> <a href="/author/${catSlug(p.author)}">${esc(p.author)}</a></p>${tags(p)}</article>`;
-}
-const usDate = iso => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "Asia/Kolkata" }); };
-function listPage(req, res, { title, heading, items, base, canonical }) {
+function listPage(req, res, { title, heading, intro, items, base, canonical }) {
   const url = new URL(req.url, "http://x");
   const pages = Math.max(1, Math.ceil(items.length / PER_PAGE));
   const page = Math.min(pages, Math.max(1, parseInt(url.searchParams.get("page") || "1", 10) || 1));
-  const slice = items.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const isHome = base === "/";
+  const s = store.settings;
   const sep = base.includes("?") ? "&" : "?";
   const href = n => n === 1 ? base : `${base}${sep}page=${n}`;
+  let list = items.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  let top = "";
+  if (isHome && page === 1) {
+    const [lead, ...rest] = list;
+    list = rest;
+    top = `<section class="hero"><div class="shell hero-in">
+<div class="hero-copy"><p class="eyebrow">bhikshuk.com · Mahanubhav Dharma</p><h1>${esc(s.siteTitle)}</h1><p class="hero-tag">${esc(s.tagline)}</p><p class="hero-sub">${esc(s.subtitle)}</p>
+<div class="chips">${allCats().map(c => `<a href="/category/${catSlug(c)}">${esc(c)}</a>`).join("")}</div></div>
+<img class="hero-logo" src="/logo.png" alt="The Kali Yuga's The Revolution of the Immortal Love, propounded by The Messenger of the Immortal Love" width="260" height="258"></div></section>
+${lead ? `<section class="shell lead"><p class="sec-h">Latest</p>${card(lead, true)}</section>` : ""}`;
+  } else {
+    top = `<section class="shell page-head"><p class="eyebrow">${esc(intro || "Collection")}</p><h1>${esc(heading)}</h1><p class="count">${items.length} ${items.length === 1 ? "post" : "posts"}</p></section>`;
+  }
   let nums = [];
   for (let n = 1; n <= pages; n++) if (n === 1 || n === pages || Math.abs(n - page) <= 1) nums.push(n); else if (nums[nums.length - 1] !== "…") nums.push("…");
-  const pager = pages > 1 ? `<nav class="pager">${page < pages ? `<a href="${href(page + 1)}">← Older posts</a><span class="bar">|</span>` : ""}${nums.map(n => n === "…" ? "<span>…</span>" : n === page ? `<b>${n}</b>` : `<a href="${href(n)}">${n}</a>`).join("")}${page > 1 ? `<span class="bar">|</span><a href="${href(page - 1)}">Newer posts →</a>` : ""}</nav>` : "";
-  const isHome = base === "/";
+  const pager = pages > 1 ? `<nav class="pager" aria-label="Pages">${page > 1 ? `<a class="pg-btn" href="${href(page - 1)}">← Newer</a>` : "<span></span>"}<span class="pg-nums">${nums.map(n => n === "…" ? "<span>…</span>" : n === page ? `<b aria-current="page">${n}</b>` : `<a href="${href(n)}">${n}</a>`).join("")}</span>${page < pages ? `<a class="pg-btn" href="${href(page + 1)}">Older →</a>` : "<span></span>"}</nav>` : "";
   send(res, 200, layout({
-    title, canonical, description: store.settings.subtitle,
-    body: `${isHome && page === 1 ? `<img class="logo" src="/logo.png" alt="The Kali Yuga's The Revolution of the Immortal Love, propounded by The Messenger of the Immortal Love" width="200" height="199">` : ""}
-<h1 class="${isHome ? "sr" : "list-h"}">${esc(heading)}</h1>
-${slice.map(card).join("") || "<p>Nothing found.</p>"}${pager}`
+    title, canonical, description: s.subtitle,
+    body: `${top}<section class="shell">${isHome && page === 1 && list.length ? '<p class="sec-h">More stories</p>' : ""}<div class="grid">${list.map(p => card(p)).join("") || (items.length ? "" : '<p class="empty">Nothing found. Try another word.</p>')}</div>${pager}</section>`
   }));
 }
 function itemPage(res, it, preview = false) {
   const vids = (it.videos || []).map(ytId).filter(Boolean).map(video).join("");
+  const isPost = it.type === "post";
+  const all = posts(), i = all.findIndex(x => x.id === it.id);
+  const related = isPost ? all.filter(x => x.id !== it.id && x.cats.some(c => it.cats.includes(c))).slice(0, 3) : [];
+  const share = encodeURIComponent(SITE_URL + "/" + it.slug), tx = encodeURIComponent(it.title);
   send(res, 200, layout({
-    title: `${it.title} – Bhikshuk`, canonical: "/" + it.slug, description: summary(it.body, 160), image: firstImage(it),
-    body: `<article class="post">${preview ? '<p class="tnote">Preview: this is a draft. Only you can see it.</p>' : ""}
-<p><a class="back" href="/">← Back to Home</a></p>
-${it.type === "post" && (it.cats || []).length ? `<p class="kick">${it.cats.map(c => `<a href="/category/${catSlug(c)}">${esc(c)}</a>`).join("")}</p>` : ""}
+    article: true, title: `${it.title} – ${store.settings.siteTitle}`, canonical: "/" + it.slug, description: summary(it.body, 160), image: firstImage(it),
+    body: `<article class="article">${preview ? '<p class="shell-narrow tnote">Preview: this is a draft. Only you can see it.</p>' : ""}
+<header class="shell-narrow art-head">
+${isPost ? `<p class="eyebrow">${(it.cats || []).map(c => `<a href="/category/${catSlug(c)}">${esc(c)}</a>`).join(" · ") || "Post"}</p>` : ""}
 <h1>${esc(it.title)}</h1>
-${it.type === "post" ? `<p class="byline">By ${esc(it.author)}<span>${esc(longDate(it.date))}</span></p>` : ""}
-<div class="post-body">${renderBody(it.body)}${vids}</div>
-${it.type === "post" ? `<p class="share"><a href="https://wa.me/?text=${encodeURIComponent(it.title + " " + SITE_URL + "/" + it.slug)}" target="_blank" rel="noopener">Share on WhatsApp</a></p>` : ""}
-<p><a class="back" href="/">← Back to Home</a></p></article>`
+${isPost ? `<p class="meta big">${metaLine(it)}</p>` : ""}
+</header>
+<div class="shell-narrow prose">${renderBody(it.body)}${vids}${!String(it.body).trim() && !vids ? '<p class="empty">This post has no text yet.</p>' : ""}</div>
+${isPost ? `<div class="shell-narrow share"><span>Share</span><a class="s-wa" href="https://wa.me/?text=${tx}%20${share}" target="_blank" rel="noopener">WhatsApp</a><a href="https://www.facebook.com/sharer/sharer.php?u=${share}" target="_blank" rel="noopener">Facebook</a><a href="https://twitter.com/intent/tweet?text=${tx}&url=${share}" target="_blank" rel="noopener">X</a><button id="copy" type="button">Copy link</button></div>
+<aside class="shell-narrow author-box"><img src="/logo.png" alt="" width="72" height="72"><div><p class="ab-name">${esc(it.author)}</p><p>${esc(store.settings.tagline)}. ${esc(store.settings.subtitle)}</p></div></aside>
+<nav class="shell-narrow prevnext">${all[i + 1] ? `<a href="/${esc(all[i + 1].slug)}"><small>← Previous</small><span>${esc(all[i + 1].title)}</span></a>` : "<span></span>"}${all[i - 1] ? `<a class="nx" href="/${esc(all[i - 1].slug)}"><small>Next →</small><span>${esc(all[i - 1].title)}</span></a>` : "<span></span>"}</nav>` : ""}
+</article>
+${related.length ? `<section class="shell more"><p class="sec-h">More on ${esc(it.cats[0])}</p><div class="grid">${related.map(p => card(p)).join("")}</div></section>` : ""}`
+  }));
+}
+function archiveIndex(res) {
+  const months = {};
+  for (const p of posts()) (months[p.date.slice(0, 7)] ||= []).push(p);
+  const name = k => new Date(k + "-15").toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  send(res, 200, layout({
+    title: `All posts – ${store.settings.siteTitle}`, canonical: "/archive",
+    body: `<section class="shell page-head"><p class="eyebrow">Archive</p><h1>All posts by month</h1><p class="count">${posts().length} posts</p></section>
+<section class="shell-narrow archive">${Object.keys(months).map(k => `<h2><a href="/archive/${k}">${esc(name(k))}</a></h2><ul>${months[k].map(p => `<li><a href="/${esc(p.slug)}">${esc(p.title)}</a><span>${esc(usDate(p.date))}</span></li>`).join("")}</ul>`).join("")}</section>`
   }));
 }
 function notFound(res) {
-  send(res, 404, layout({ title: "Page not found", body: `<h1 class="list-h">Page not found</h1><p>Sorry, the page you're looking for doesn't exist or has been moved.</p><p><a class="back" href="/">Go Home</a></p>` }));
+  send(res, 404, layout({ title: "Page not found", body: `<section class="shell page-head"><p class="eyebrow">404</p><h1>This page isn't here</h1><p class="count">It may have moved. Try the search, or go back to the latest posts.</p><p><a class="pg-btn" href="/">Go to Home</a></p></section>` }));
 }
 
 // ---------- http ----------
@@ -286,7 +320,7 @@ function cleanItem(b, old = {}) {
   it.order = Number(b.order ?? it.order ?? 0) || 0;
   it.inMenu = it.type === "page" ? !!(b.inMenu ?? it.inMenu ?? true) : false;
   let slug = slugify(b.slug || it.slug || it.title);
-  const RESERVED = ["admin", "api", "media", "search", "category", "archive", "author", "logo.png", "page", "sitemap.xml", "robots.txt", "site.css", "favicon.svg"];
+  const RESERVED = ["admin", "api", "media", "search", "category", "archive", "author", "logo.png", "feed", "feed.xml", "page", "sitemap.xml", "robots.txt", "site.css", "favicon.svg"];
   let s = slug, i = 2;
   while (RESERVED.includes(s) || store.items.some(x => x.slug === s && x.id !== it.id)) s = `${slug}-${i++}`;
   it.slug = s;
@@ -368,23 +402,28 @@ const server = http.createServer(async (req, res) => {
     if (m) {
       const cat = allCats().find(c => catSlug(c) === m[1]);
       if (!cat) return notFound(res);
-      return listPage(req, res, { title: `${cat} – ${store.settings.siteTitle}`, heading: cat, items: posts().filter(x => x.cats.includes(cat)), base: "/category/" + m[1], canonical: "/category/" + m[1] });
+      return listPage(req, res, { title: `${cat} – ${store.settings.siteTitle}`, heading: cat, intro: "Topic", items: posts().filter(x => x.cats.includes(cat)), base: "/category/" + m[1], canonical: "/category/" + m[1] });
+    }
+    if (p === "/archive") return archiveIndex(res);
+    if (p === "/feed.xml" || p === "/feed") {
+      const items = posts().slice(0, 20).map(x => `<item><title>${esc(x.title)}</title><link>${esc(SITE_URL + "/" + x.slug)}</link><guid>${esc(SITE_URL + "/" + x.slug)}</guid><pubDate>${new Date(x.date).toUTCString()}</pubDate><description>${esc(summary(x.body, 300))}</description></item>`).join("");
+      return send(res, 200, `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>${esc(store.settings.siteTitle)}</title><link>${SITE_URL}</link><description>${esc(store.settings.tagline)}</description>${items}</channel></rss>`, "application/rss+xml; charset=utf-8");
     }
     m = p.match(/^\/archive\/(\d{4}-\d{2})$/);
     if (m) {
       const label = new Date(m[1] + "-15").toLocaleDateString("en-IN", { month: "long", year: "numeric" });
-      return listPage(req, res, { title: `${label} – ${store.settings.siteTitle}`, heading: "Archives: " + label, items: posts().filter(x => x.date.startsWith(m[1])), base: "/archive/" + m[1], canonical: "/archive/" + m[1] });
+      return listPage(req, res, { title: `${label} – ${store.settings.siteTitle}`, heading: label, intro: "Archive", items: posts().filter(x => x.date.startsWith(m[1])), base: "/archive/" + m[1], canonical: "/archive/" + m[1] });
     }
     m = p.match(/^\/author\/([\w-]+)$/);
     if (m) {
       const list = posts().filter(x => catSlug(x.author) === m[1]);
       if (!list.length) return notFound(res);
-      return listPage(req, res, { title: `${list[0].author} – ${store.settings.siteTitle}`, heading: "Author: " + list[0].author, items: list, base: "/author/" + m[1], canonical: "/author/" + m[1] });
+      return listPage(req, res, { title: `${list[0].author} – ${store.settings.siteTitle}`, heading: list[0].author, intro: "Author", items: list, base: "/author/" + m[1], canonical: "/author/" + m[1] });
     }
     if (p === "/search") {
       const q = (url.searchParams.get("q") || "").trim().toLowerCase();
       const hits = q ? posts().concat(menuPages()).filter(x => (x.title + " " + x.body).toLowerCase().includes(q)) : [];
-      return listPage(req, res, { title: `Search – ${store.settings.siteTitle}`, heading: q ? `Search: ${q} (${hits.length})` : "Search", items: hits, base: "/search?q=" + encodeURIComponent(q), canonical: "/search" });
+      return listPage(req, res, { title: `Search – ${store.settings.siteTitle}`, heading: q ? `“${q}”` : "Search", intro: "Search results", items: hits, base: "/search?q=" + encodeURIComponent(q), canonical: "/search" });
     }
     if (p === "/robots.txt") return send(res, 200, `User-agent: *\nDisallow: /admin\nDisallow: /api/\nSitemap: ${SITE_URL}/sitemap.xml\n`, "text/plain");
     if (p === "/sitemap.xml") {
