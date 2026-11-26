@@ -138,6 +138,11 @@ const DEFAULT_SETTINGS = {
   subtitle: "The eternal journey of Bhikshsuk in the Mahanubhav Dharma till the end of the this Kaliyuga!"
 };
 for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) if (store.settings[k] === undefined || (k === "footer" && store.settings.footer.startsWith("© 2018–2026"))) store.settings[k] = v;
+// Posts that had no text on the old site were first saved as drafts. The old site listed them, so show them too (once).
+if (!store.settings.shownEmptyPosts) {
+  for (const it of store.items) if (it.type === "post" && it.status === "draft" && !String(it.body).trim()) it.status = "published";
+  store.settings.shownEmptyPosts = true; save();
+}
 // The top menu, in the same order as before. "Puja Avasara" opens a small list.
 const MENU = ["privacy-policy", "madhyan-puja-avasar-marathi-aarth-meaning", "sayankal-puja-avasara", "about", "contact",
   "themessage-of-the-immortal-love", "mahanubhavvichar", "dnyanpunj-bhikshuk-and-dnyanpunj-tapasvini", "lets-know-parmeshwar",
