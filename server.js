@@ -145,6 +145,11 @@ if (!store.settings.shownEmptyPosts) {
   for (const it of store.items) if (it.type === "post" && it.status === "draft" && !String(it.body).trim()) it.status = "published";
   store.settings.shownEmptyPosts = true; save();
 }
+// 26 Nov 2026: the owner asked for the YouTube button to open the Gulab Global Free Legal Aid channel.
+if (!store.settings.ytButtonV2) {
+  store.settings.youtube = "https://www.youtube.com/@GulabGlobalFreeLegalAid";
+  store.settings.ytButtonV2 = true; save();
+}
 // The top menu, in the same order as before. "Puja Avasara" opens a small list.
 const MENU = ["privacy-policy", "madhyan-puja-avasar-marathi-aarth-meaning", "sayankal-puja-avasara", "about", "contact",
   "themessage-of-the-immortal-love", "mahanubhavvichar", "dnyanpunj-bhikshuk-and-dnyanpunj-tapasvini", "lets-know-parmeshwar",
@@ -189,7 +194,7 @@ ${summary(p.body) ? `<span class="excerpt">${esc(summary(p.body, big ? 240 : 140
 function layout({ title, description, body, canonical, image, article = false }) {
   const s = store.settings;
   const yt = String(s.youtubeLinks || "").split("\n").map(x => x.trim()).filter(Boolean);
-  const channel = s.youtube || yt.find(u => u.includes("@")) || "";
+  const channel = s.youtube || "";
   const cats = allCats();
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title><meta name="description" content="${esc(description || s.subtitle)}">
